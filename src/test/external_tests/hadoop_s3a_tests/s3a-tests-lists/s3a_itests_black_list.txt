@@ -14,8 +14,6 @@ ITestS3AContractMultipartUploader
 ITestS3ACannedACLs#testCreatedObjectsHaveACLs
 # aws-chunked left in Content-Encoding metadata; S3 strips it from the stored encoding header. (Fixed but working in isolation)
 ITestS3AContentEncoding#testCreatedObjectsHaveEncoding
-# getFileChecksum expects content MD5 ETag; NC default etag is mtime-ino
-ITestS3AMiscOperations
 
 # --- Suite isolation (pass alone, flaky under full parallel ITestS3A* run) ---
 # S3AInstrumentation.hasMetricSystem() differs when entire suite runs in parallel.
