@@ -94,4 +94,28 @@ EOF
 
 EXCLUDED_ITESTS="${EXCLUDED_ITESTS:-ITestS3AContractMultipartUploader}" # TODO: remove exclusion after CI resource fix
 echo "Running: mvn -pl :hadoop-aws -am -DskipTests=false -DskipITs=false -Dit.test='ITestS3A*,!${EXCLUDED_ITESTS}' -Dtest=TestS3A* verify"
+set +e
 mvn -pl :hadoop-aws -am -DskipTests=false -DskipITs=false "-Dit.test=ITestS3A*,!${EXCLUDED_ITESTS}" -Dtest=TestS3A* verify
+mvn_status=$?
+set -e
+
+# Failsafe may log failures and still exit 0 (BUILD SUCCESS). Inspect reports on disk.
+FAILSAFE_REPORTS="target/failsafe-reports"
+FAILSAFE_SUMMARY="${FAILSAFE_REPORTS}/failsafe-summary.xml"
+failsafe_failed=0
+if [ -f "$FAILSAFE_SUMMARY" ]; then
+  if ! grep -qE '<failsafe-summary[^>]*result="0"' "$FAILSAFE_SUMMARY" \
+    || grep -qE '<(failures|errors)>[1-9][0-9]*</(failures|errors)>' "$FAILSAFE_SUMMARY"; then
+    failsafe_failed=1
+  fi
+elif compgen -G "${FAILSAFE_REPORTS}/TEST-*.xml" >/dev/null 2>&1; then
+  if grep -hE ' failures="[1-9][0-9]*"| errors="[1-9][0-9]*"' "${FAILSAFE_REPORTS}"/TEST-*.xml 2>/dev/null | grep -q .; then
+    failsafe_failed=1
+  fi
+fi
+if [ "$failsafe_failed" -eq 1 ]; then
+  exit 1
+fi
+if [ "$mvn_status" -ne 0 ]; then
+  exit "$mvn_status"
+fi
